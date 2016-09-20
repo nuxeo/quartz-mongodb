@@ -1,10 +1,10 @@
 package com.novemberain.quartz.mongodb.clojure;
 
-import clojure.lang.DynamicClassLoader;
 import org.quartz.spi.ClassLoadHelper;
 
 import java.io.InputStream;
 import java.net.URL;
+
 
 /**
  * Makes it possible for Quartz to load and instantiate jobs that are defined
@@ -12,9 +12,24 @@ import java.net.URL;
  */
 public class DynamicClassLoadHelper implements ClassLoadHelper {
 
+    private final ClassLoader classLoader;
+
+    public DynamicClassLoadHelper() {
+        ClassLoader cl;
+        try {
+            // use Clojure DynamicClassLoader if available
+            @SuppressWarnings("unchecked")
+            Class<ClassLoader> classLoaderClass = (Class<ClassLoader>) Class.forName("clojure.lang.DynamicClassLoader");
+            cl = classLoaderClass.newInstance();
+        } catch (ReflectiveOperationException e) {
+            cl = null;
+        }
+        classLoader = cl;
+    }
+
     @Override
     public ClassLoader getClassLoader() {
-        return new DynamicClassLoader();
+        return classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
     }
 
     @Override
