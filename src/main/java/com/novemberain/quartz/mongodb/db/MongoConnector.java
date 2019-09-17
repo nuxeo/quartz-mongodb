@@ -2,11 +2,23 @@ package com.novemberain.quartz.mongodb.db;
 
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.http.ssl.SSLContexts;
 import org.quartz.SchedulerConfigException;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLContext;
 
 /**
  * The responsibility of this class is create a MongoClient with given parameters.
@@ -42,6 +54,14 @@ public class MongoConnector {
         private String dbName;
         private String authDbName;
         private int writeTimeout;
+        private Boolean enableSSL;
+        private Boolean sslInvalidHostNameAllowed;
+        private String trustStorePath;
+        private String trustStorePassword;
+        private String trustStoreType;
+        private String keyStorePath;
+        private String keyStorePassword;
+        private String keyStoreType;
 
         public MongoConnector build() throws SchedulerConfigException {
             connect();
@@ -110,8 +130,54 @@ public class MongoConnector {
             }
         }
 
-        private MongoClientOptions createOptions() {
+        private MongoClientOptions createOptions() throws SchedulerConfigException {
+            SSLContext sslContext = getSSLContext();
+            if (sslContext == null) {
+                if (enableSSL != null) {
+                    optionsBuilder.sslEnabled(enableSSL);
+                    if (sslInvalidHostNameAllowed != null) {
+                        optionsBuilder.sslInvalidHostNameAllowed(sslInvalidHostNameAllowed);
+                    }
+                }
+            } else {
+                optionsBuilder.sslEnabled(true);
+                optionsBuilder.sslContext(sslContext);
+            }
             return optionsBuilder.build();
+        }
+
+        private SSLContext getSSLContext() throws SchedulerConfigException {
+            try {
+                KeyStore trustStore = loadKeyStore(trustStorePath, trustStorePassword, trustStoreType);
+                KeyStore keyStore = loadKeyStore(keyStorePath, keyStorePassword, keyStoreType);
+                if (trustStore == null && keyStore == null) {
+                    return null;
+                }
+                SSLContextBuilder sslContextBuilder = SSLContexts.custom();
+                if (trustStore != null) {
+                    sslContextBuilder.loadTrustMaterial(trustStore, null);
+                }
+                if (keyStore != null) {
+                    sslContextBuilder.loadKeyMaterial(keyStore,
+                            StringUtils.isBlank(keyStorePassword) ? null : keyStorePassword.toCharArray());
+                }
+                return sslContextBuilder.build();
+            } catch (GeneralSecurityException | IOException e) {
+                throw new SchedulerConfigException("Cannot setup SSL context", e);
+            }
+        }
+
+        private KeyStore loadKeyStore(String path, String password, String type)
+                throws GeneralSecurityException, IOException {
+            if (StringUtils.isBlank(path)) {
+                return null;
+            }
+            KeyStore keyStore = KeyStore.getInstance(StringUtils.defaultIfBlank(type, KeyStore.getDefaultType()));
+            char[] passwordChars = StringUtils.isBlank(password) ? null : password.toCharArray();
+            try (InputStream is = Files.newInputStream(Paths.get(path))) {
+                keyStore.load(is, passwordChars);
+            }
+            return keyStore;
         }
 
         private List<MongoCredential> createCredentials() {
@@ -205,13 +271,23 @@ public class MongoConnector {
             return this;
         }
 
-        public MongoConnectorBuilder withSSL(Boolean enableSSL, Boolean sslInvalidHostNameAllowed) {
-            if (enableSSL != null) {
-                optionsBuilder.sslEnabled(enableSSL);
-                if (sslInvalidHostNameAllowed != null) {
-                    optionsBuilder.sslInvalidHostNameAllowed(sslInvalidHostNameAllowed);
-                }
-            }
+        public MongoConnectorBuilder withSSL(final Boolean enableSSL, final Boolean sslInvalidHostNameAllowed) {
+            this.enableSSL = enableSSL;
+            this.sslInvalidHostNameAllowed = sslInvalidHostNameAllowed;
+            return this;
+        }
+
+        public MongoConnectorBuilder withTrustStore(String trustStorePath, String trustStorePassword, String trustStoreType) {
+            this.trustStorePath = trustStorePath;
+            this.trustStorePassword = trustStorePassword;
+            this.trustStoreType = trustStoreType;
+            return this;
+        }
+
+        public MongoConnectorBuilder withKeyStore(String keyStorePath, String keyStorePassword, String keyStoreType) {
+            this.keyStorePath = keyStorePath;
+            this.keyStorePassword = keyStorePassword;
+            this.keyStoreType = keyStoreType;
             return this;
         }
 
