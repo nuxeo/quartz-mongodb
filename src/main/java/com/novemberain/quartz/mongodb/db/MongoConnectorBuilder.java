@@ -2,12 +2,24 @@ package com.novemberain.quartz.mongodb.db;
 
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.http.ssl.SSLContexts;
 import org.quartz.SchedulerConfigException;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLContext;
 
 /**
  * Builder for {@link MongoConnector}.
@@ -32,6 +44,13 @@ public class MongoConnectorBuilder {
     private Integer threadsAllowedToBlockForConnectionMultiplier;
     private Boolean enableSSL;
     private Boolean sslInvalidHostNameAllowed;
+    private String trustStorePath;
+    private String trustStorePassword;
+    private String trustStoreType;
+    private String keyStorePath;
+    private String keyStorePassword;
+    private String keyStoreType;
+
 
     /**
      * Use {@link #builder()}.
@@ -115,7 +134,7 @@ public class MongoConnectorBuilder {
         return Collections.emptyList();
     }
 
-    private MongoClientOptions createOptions() {
+    private MongoClientOptions createOptions() throws SchedulerConfigException {
         final MongoClientOptions.Builder optionsBuilder = MongoClientOptions.builder();
         if (maxConnectionsPerHost != null) {
             optionsBuilder.connectionsPerHost(maxConnectionsPerHost);
@@ -132,13 +151,53 @@ public class MongoConnectorBuilder {
         if (threadsAllowedToBlockForConnectionMultiplier != null) {
             optionsBuilder.threadsAllowedToBlockForConnectionMultiplier(threadsAllowedToBlockForConnectionMultiplier);
         }
-        if (enableSSL != null) {
-            optionsBuilder.sslEnabled(enableSSL);
-            if (sslInvalidHostNameAllowed != null) {
-                optionsBuilder.sslInvalidHostNameAllowed(sslInvalidHostNameAllowed);
+        SSLContext sslContext = getSSLContext();
+        if (sslContext == null) {
+            if (enableSSL != null) {
+                optionsBuilder.sslEnabled(enableSSL);
+                if (sslInvalidHostNameAllowed != null) {
+                    optionsBuilder.sslInvalidHostNameAllowed(sslInvalidHostNameAllowed);
+                }
             }
+        } else {
+            optionsBuilder.sslEnabled(true);
+            optionsBuilder.sslContext(sslContext);
         }
         return optionsBuilder.build();
+    }
+
+    private SSLContext getSSLContext() throws SchedulerConfigException {
+        try {
+            KeyStore trustStore = loadKeyStore(trustStorePath, trustStorePassword, trustStoreType);
+            KeyStore keyStore = loadKeyStore(keyStorePath, keyStorePassword, keyStoreType);
+            if (trustStore == null && keyStore == null) {
+                return null;
+            }
+            SSLContextBuilder sslContextBuilder = SSLContexts.custom();
+            if (trustStore != null) {
+                sslContextBuilder.loadTrustMaterial(trustStore, null);
+            }
+            if (keyStore != null) {
+                sslContextBuilder.loadKeyMaterial(keyStore,
+                        StringUtils.isBlank(keyStorePassword) ? null : keyStorePassword.toCharArray());
+            }
+            return sslContextBuilder.build();
+        } catch (GeneralSecurityException | IOException e) {
+            throw new SchedulerConfigException("Cannot setup SSL context", e);
+        }
+    }
+
+    private KeyStore loadKeyStore(String path, String password, String type)
+            throws GeneralSecurityException, IOException {
+        if (StringUtils.isBlank(path)) {
+            return null;
+        }
+        KeyStore keyStore = KeyStore.getInstance(StringUtils.defaultIfBlank(type, KeyStore.getDefaultType()));
+        char[] passwordChars = StringUtils.isBlank(password) ? null : password.toCharArray();
+        try (InputStream is = Files.newInputStream(Paths.get(path))) {
+            keyStore.load(is, passwordChars);
+        }
+        return keyStore;
     }
 
     private WriteConcern createWriteConcern() throws SchedulerConfigException {
@@ -207,6 +266,12 @@ public class MongoConnectorBuilder {
                 paramNotAllowed("Threads allowed to block for connection multiplier", suffix));
         checkIsNull(enableSSL, paramNotAllowed("Enable ssl", suffix));
         checkIsNull(sslInvalidHostNameAllowed, paramNotAllowed("SSL invalid hostname allowed", suffix));
+        checkIsNull(trustStorePath, paramNotAllowed("TrustStore path", suffix));
+        checkIsNull(trustStorePassword, paramNotAllowed("TrustStore password", suffix));
+        checkIsNull(trustStoreType, paramNotAllowed("TrustStore type", suffix));
+        checkIsNull(keyStorePath, paramNotAllowed("KeyStore path", suffix));
+        checkIsNull(keyStorePassword, paramNotAllowed("KeyStore password", suffix));
+        checkIsNull(keyStoreType, paramNotAllowed("KeyStore type", suffix));
     }
 
     private static String paramNotAllowed(final String paramName, final String suffix) {
@@ -292,4 +357,19 @@ public class MongoConnectorBuilder {
         this.sslInvalidHostNameAllowed = sslInvalidHostNameAllowed;
         return this;
     }
+
+    public MongoConnectorBuilder withTrustStore(String trustStorePath, String trustStorePassword, String trustStoreType) {
+        this.trustStorePath = trustStorePath;
+        this.trustStorePassword = trustStorePassword;
+        this.trustStoreType = trustStoreType;
+        return this;
+    }
+
+    public MongoConnectorBuilder withKeyStore(String keyStorePath, String keyStorePassword, String keyStoreType) {
+        this.keyStorePath = keyStorePath;
+        this.keyStorePassword = keyStorePassword;
+        this.keyStoreType = keyStoreType;
+        return this;
+    }
+
 }

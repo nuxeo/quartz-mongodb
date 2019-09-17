@@ -60,6 +60,12 @@ public class MongoDBJobStore implements JobStore, Constants {
     Integer mongoOptionThreadsAllowedToBlockForConnectionMultiplier;
     Boolean mongoOptionEnableSSL;
     Boolean mongoOptionSslInvalidHostNameAllowed;
+    String mongoOptionTrustStorePath;
+    String mongoOptionTrustStorePassword;
+    String mongoOptionTrustStoreType;
+    String mongoOptionKeyStorePath;
+    String mongoOptionKeyStorePassword;
+    String mongoOptionKeyStoreType;
 
     int mongoOptionWriteConcernTimeoutMillis = 5000;
 
@@ -520,7 +526,7 @@ public class MongoDBJobStore implements JobStore, Constants {
        * Indexes are to be declared as group then name.  This is important as the quartz API allows
        * for the searching of jobs and triggers using a group matcher.  To be able to use the compound
        * index using group alone (as the API allows), group must be the first key in that index.
-       * 
+       *
        * To be consistent, all such indexes are ensured in the order group then name.  The previous
        * indexes are removed after we have "ensured" the new ones.
        */
@@ -570,6 +576,30 @@ public class MongoDBJobStore implements JobStore, Constants {
 
     public void setMongoOptionSslInvalidHostNameAllowed(boolean sslInvalidHostNameAllowed) {
         this.mongoOptionSslInvalidHostNameAllowed = sslInvalidHostNameAllowed;
+    }
+
+    public void setMongoOptionTrustStorePath(String trustStorePath) {
+        this.mongoOptionTrustStorePath = trustStorePath;
+    }
+
+    public void setMongoOptionTrustStorePassword(String trustStorePassword) {
+        this.mongoOptionTrustStorePassword = trustStorePassword;
+    }
+
+    public void setMongoOptionTrustStoreType(String trustStoreType) {
+        this.mongoOptionTrustStoreType = trustStoreType;
+    }
+
+    public void setMongoOptionKeyStorePath(String keyStorePath) {
+        this.mongoOptionKeyStorePath = keyStorePath;
+    }
+
+    public void setMongoOptionKeyStorePassword(String keyStorePassword) {
+        this.mongoOptionKeyStorePassword = keyStorePassword;
+    }
+
+    public void setMongoOptionKeyStoreType(String keyStoreType) {
+        this.mongoOptionKeyStoreType = keyStoreType;
     }
 
     public void setMongoOptionWriteConcernTimeoutMillis(int writeConcernTimeoutMillis) {
