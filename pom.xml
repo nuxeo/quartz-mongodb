@@ -57,4 +57,17 @@
     </dependency>
     -->
   </dependencies>
+
+  <distributionManagement>
+    <repository>
+      <id>vendor-releases</id>
+      <url>https://maven.nuxeo.org/nexus/content/repositories/vendor-releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>vendor-snapshots</id>
+      <url>https://maven.nuxeo.org/nexus/content/repositories/vendor-snapshots/</url>
+      <uniqueVersion>true</uniqueVersion>
+    </snapshotRepository>
+  </distributionManagement>
+
 </project>
