@@ -9,21 +9,3 @@ This project uses a very minimalistic approach to contributions:
  * Make sure all tests pass
  * Submit a pull request
  * Be patient
-
-## Prerequisites
-
-This project uses Gradle 6.x. A [compatible JDK version](https://docs.gradle.org/current/userguide/compatibility.html#java) is therefore required. 
-
-## Running Tests
-
-To start a local MongoDB node before running tests, use
-
-``` shell
-./gradlew startMongoDb
-```
-
-Then run the tests:
-
-``` shell
-./gradlew check
-```

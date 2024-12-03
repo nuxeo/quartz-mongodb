@@ -13,3 +13,5 @@ lib/*
 src/legacytest/*
 checkouts/*
 bin
+target/
+

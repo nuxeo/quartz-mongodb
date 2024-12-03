@@ -1,61 +1,48 @@
 # A MongoDB-based store for Quartz
 
-## Be Aware of Abandonware
+This is a fork of [michaelklishin/quartz-mongodb](https://github.com/michaelklishin/quartz-mongodb).
 
-**This project IS NO LONGER MAINTAINED**. If you plan on using it, be ready to address any issues
-on your own and produce your own releases. Issues that ask others to do something
-will be ignored. Pull requests may be merged on a very random schedule.
+You can download this library from our artifactory.
 
+Direct link is https://packages.nuxeo.com/service/rest/repository/browse/maven-public/org/nuxeo/lib/novemberain/.
+
+Or with Maven:
+
+```xml
+<project>
+  ...
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.nuxeo.lib.novemberain</groupId>
+        <artifactId>quartz-mongodb</artifactId>
+        <version>VERSION</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  
+  ...
+  
+  <repositories>
+    <repository>
+      <id>nuxeo-public</id>
+      <url>https://packages.nuxeo.com/repository/maven-public/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <updatePolicy>always</updatePolicy>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+  ...
+</project>
+```
 
 ## What is This?
 
 This is a MongoDB-backed job store for the [Quartz scheduler](http://quartz-scheduler.org/).
-
-## Maven Artifacts
-
-Artifacts are released to [Bintray](https://bintray.com/michaelklishin/maven/).
-
-If you are using Maven, add the following repository
-definition to your `pom.xml`:
-
-``` xml
-<repositories>
-    <repository>
-        <id>jcenter</id>
-        <url>https://jcenter.bintray.com/</url>
-    </repository>
-</repositories>
-```
-
-With Gradle, add the following to your `build.gradle`:
-
-``` groovy
-repositories {
-    maven {
-        url "https://jcenter.bintray.com/"
-    }
-}
-```
-
-
-### The Most Recent Release
-
-With Maven:
-
-``` xml
-<dependency>
-    <groupId>com.novemberain</groupId>
-    <artifactId>quartz-mongodb</artifactId>
-    <version>2.2.0-rc2</version>
-</dependency>
-```
-
-With Gradle:
-
-``` groovy
-compile "com.novemberain:quartz-mongodb:2.2.0-rc2"
-```
-
 
 ## Usage
 
@@ -101,17 +88,6 @@ to ignore the failure:
 
     org.quartz.jobStore.checkInErrorHandler.class=com.novemberain.quartz.mongodb.cluster.NoOpErrorHandler
 
-
-
-
-### Clojure and Quartzite
-
-If you use [Quartzite](http://clojurequartz.info) or want your job classes to be available
-to Clojure code, use:
-
-    org.quartz.jobStore.class=com.novemberain.quartz.mongodb.DynamicMongoDBJobStore
-
-(this assumes Clojure jar is on classpath).
 
 ### Job Data storage
 By default you are allowed to pass any `java.io.Serializable` objects inside `JobDataMap`.
@@ -171,32 +147,9 @@ org.quartz.jobStore.misfireThreshold=10000
 org.quartz.jobStore.mongoOptionWriteConcernTimeoutMillis=10000
 ```
 
-## Continuous Integration
-
-[![Build Status](https://secure.travis-ci.org/michaelklishin/quartz-mongodb.png?branch=master)](http://travis-ci.org/michaelklishin/quartz-mongodb)
-
-CI is hosted by [Travis CI](http://travis-ci.org/)
-
-
 ## Copyright & License
 
 (c) Michael S. Klishin, Alex Petrov, 2011-2020.
 
 [Apache Public License 2.0](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-
-## FAQ
-
-### Project Origins
-
-The project was originally started by MuleSoft. It supports all Quartz trigger types and
-tries to be as feature complete as possible.
-
-### Why the Fork?
-
-MuleSoft developers did not respond to attempts to submit pull
-requests for several months. As more and more functionality was added
-and implementation code refactored, I decided to completely separate
-this fork form GitHub forks network because the project is now too
-different from the original one. All changes were made with respect to
-the Apache Public License 2.0.
