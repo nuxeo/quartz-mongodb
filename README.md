@@ -153,3 +153,52 @@ org.quartz.jobStore.mongoOptionWriteConcernTimeoutMillis=10000
 
 [Apache Public License 2.0](http://www.apache.org/licenses/LICENSE-2.0.html)
 
+
+## Release the project
+
+Make sure the project builds and its tests pass.
+
+Then create a temporary branch to perform the release:
+
+```bash
+git checkout -b tmp-release
+```
+
+Then update the project version to final, for instance 2.3.0:
+
+```bash
+mvn versions:set -DnewVersion=2.3.0 -DgenerateBackupPoms=false
+```
+
+Then commit and tag the release:
+
+```bash
+git commit -a -m "Release 2.3.0"
+git tag -a -m "Release 2.3.0" quartz-mongodb-2.3.0
+```
+
+Then deploy the maven artefacts:
+
+```bash
+mvn clean source:jar deploy -DskipTests -DaltDeploymentRepository=maven-vendor::default::VENDOR_URL
+```
+
+> [!IMPORTANT]
+> You should replace the `VENDOR_URL`.
+> Your Maven `settings.xml` file should contain appropriate authentication (if any) for the `maven-vendor` repository.
+
+Then push the tag:
+
+```bash
+git push --tags
+```
+
+Then cleanup your branch and prepare the next development iteration:
+
+```bash
+git checkout main
+git branch -D tmp-release
+mvn versions:set -DnewVersion=2.3.1-SNAPSHOT -DgenerateBackupPoms=false
+git commit -a -m "Post release 2.3.0"
+git push
+```
