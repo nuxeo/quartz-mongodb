@@ -196,7 +196,7 @@ git push --tags
 Then cleanup your branch and prepare the next development iteration:
 
 ```bash
-git checkout main
+git checkout master
 git branch -D tmp-release
 mvn versions:set -DnewVersion=2.3.1-SNAPSHOT -DgenerateBackupPoms=false
 git commit -a -m "Post release 2.3.0"
