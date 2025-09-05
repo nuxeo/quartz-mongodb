@@ -1,5 +1,6 @@
 package com.novemberain.quartz.mongodb.dao;
 
+import com.mongodb.CreateIndexCommitQuorum;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.*;
 import com.mongodb.client.result.DeleteResult;
@@ -14,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
+
+import static java.util.Collections.singletonList;
 
 import static com.mongodb.client.model.Sorts.ascending;
 
@@ -50,9 +53,12 @@ public class SchedulerDao {
     }
 
     public void createIndex() {
-        schedulerCollection.createIndex(
-                Projections.include(SCHEDULER_NAME_FIELD, INSTANCE_ID_FIELD),
-                new IndexOptions().unique(true));
+//        schedulerCollection.createIndex(
+//                Projections.include(SCHEDULER_NAME_FIELD, INSTANCE_ID_FIELD),
+//                new IndexOptions().unique(true));
+        List<IndexModel> indexes = singletonList(new IndexModel(Projections.include(SCHEDULER_NAME_FIELD, INSTANCE_ID_FIELD), new IndexOptions().unique(true)));
+        CreateIndexOptions createIndexOptions = new CreateIndexOptions();
+        schedulerCollection.createIndexes(indexes, createIndexOptions.commitQuorum(CreateIndexCommitQuorum.create(1)));
     }
 
     /**

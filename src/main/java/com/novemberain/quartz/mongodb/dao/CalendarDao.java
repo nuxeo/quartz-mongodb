@@ -6,14 +6,19 @@ import org.bson.types.Binary;
 import org.quartz.Calendar;
 import org.quartz.JobPersistenceException;
 
+import com.mongodb.CreateIndexCommitQuorum;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.CreateIndexOptions;
+import com.mongodb.client.model.IndexModel;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Projections;
 import com.novemberain.quartz.mongodb.util.SerialUtils;
 
 import java.util.LinkedList;
 import java.util.List;
+
+import static java.util.Collections.singletonList;
 
 public class CalendarDao {
 
@@ -31,7 +36,10 @@ public class CalendarDao {
     }
 
     public void createIndex() {
-        calendarCollection.createIndex(Projections.include(CALENDAR_NAME), new IndexOptions().unique(true));
+//        calendarCollection.createIndex(Projections.include(CALENDAR_NAME), new IndexOptions().unique(true));
+        List<IndexModel> indexes = singletonList(new IndexModel(Projections.include(CALENDAR_NAME), new IndexOptions().unique(true)));
+        CreateIndexOptions createIndexOptions = new CreateIndexOptions();
+        calendarCollection.createIndexes(indexes, createIndexOptions.commitQuorum(CreateIndexCommitQuorum.create(1)));
     }
 
     public MongoCollection<Document> getCollection() {

@@ -1,8 +1,11 @@
 package com.novemberain.quartz.mongodb.dao;
 
+import com.mongodb.CreateIndexCommitQuorum;
 import com.mongodb.MongoException;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.CreateIndexOptions;
+import com.mongodb.client.model.IndexModel;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.result.UpdateResult;
@@ -20,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import static java.util.Collections.singletonList;
 
 import static com.novemberain.quartz.mongodb.Constants.LOCK_INSTANCE_ID;
 import static com.novemberain.quartz.mongodb.util.Keys.*;
@@ -43,13 +47,20 @@ public class LocksDao {
     }
 
     public void createIndex(boolean clustered) {
-        locksCollection.createIndex(
-                Projections.include(KEY_GROUP, KEY_NAME, LOCK_TYPE),
-                new IndexOptions().unique(true));
+//        locksCollection.createIndex(
+//                Projections.include(KEY_GROUP, KEY_NAME, LOCK_TYPE),
+//                new IndexOptions().unique(true));
+
+        List<IndexModel> indexes = singletonList(new IndexModel(Projections.include(KEY_GROUP, KEY_NAME, LOCK_TYPE), new IndexOptions().unique(true)));
+        CreateIndexOptions createIndexOptions = new CreateIndexOptions();
+        locksCollection.createIndexes(indexes, createIndexOptions.commitQuorum(CreateIndexCommitQuorum.create(1)));
 
         if (!clustered) {
             // Need this to stop table scan when removing all locks
             locksCollection.createIndex(Projections.include(LOCK_INSTANCE_ID));
+
+            indexes = singletonList(new IndexModel(Projections.include(LOCK_INSTANCE_ID), new IndexOptions()));
+            locksCollection.createIndexes(indexes, createIndexOptions.commitQuorum(CreateIndexCommitQuorum.create(1)));
 
             // remove all locks for this instance on startup
             locksCollection.deleteMany(Filters.eq(LOCK_INSTANCE_ID, instanceId));

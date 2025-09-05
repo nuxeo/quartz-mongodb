@@ -1,8 +1,11 @@
 package com.novemberain.quartz.mongodb.dao;
 
+import com.mongodb.CreateIndexCommitQuorum;
 import com.mongodb.MongoWriteException;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.CreateIndexOptions;
+import com.mongodb.client.model.IndexModel;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.novemberain.quartz.mongodb.JobConverter;
@@ -16,7 +19,10 @@ import org.quartz.JobDetail;
 import org.quartz.JobKey;
 import org.quartz.JobPersistenceException;
 import org.quartz.impl.matchers.GroupMatcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import static java.util.Collections.singletonList;
 import java.util.*;
 
 import static com.novemberain.quartz.mongodb.util.Keys.KEY_GROUP;
@@ -24,6 +30,7 @@ import static com.novemberain.quartz.mongodb.util.Keys.toFilter;
 
 public class JobDao {
 
+    private static final Logger log = LoggerFactory.getLogger(JobDao.class);
     private final MongoCollection<Document> jobCollection;
     private final QueryHelper queryHelper;
     private final GroupHelper groupHelper;
@@ -46,7 +53,11 @@ public class JobDao {
     }
 
     public void createIndex() {
-        jobCollection.createIndex(Keys.KEY_AND_GROUP_FIELDS, new IndexOptions().unique(true));
+//        jobCollection.createIndex(Keys.KEY_AND_GROUP_FIELDS, new IndexOptions().unique(true));
+        log.error("creating index with commitQuorum=1");
+        List<IndexModel> indexes = singletonList(new IndexModel(Keys.KEY_AND_GROUP_FIELDS, new IndexOptions().unique(true)));
+        CreateIndexOptions createIndexOptions = new CreateIndexOptions();
+        jobCollection.createIndexes(indexes, createIndexOptions.commitQuorum(CreateIndexCommitQuorum.create(1)));
     }
 
     public void dropIndex() {

@@ -1,9 +1,12 @@
 package com.novemberain.quartz.mongodb.dao;
 
+import com.mongodb.CreateIndexCommitQuorum;
 import com.mongodb.MongoWriteException;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.CreateIndexOptions;
+import com.mongodb.client.model.IndexModel;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateOptions;
@@ -30,6 +33,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import static java.util.Collections.singletonList;
 import static com.mongodb.client.model.Sorts.ascending;
 import static com.novemberain.quartz.mongodb.util.Keys.KEY_GROUP;
 import static com.novemberain.quartz.mongodb.util.Keys.toFilter;
@@ -50,8 +54,11 @@ public class TriggerDao {
     }
 
     public void createIndex() {
-        triggerCollection.createIndex(Keys.KEY_AND_GROUP_FIELDS,
-                new IndexOptions().unique(true));
+//        triggerCollection.createIndex(Keys.KEY_AND_GROUP_FIELDS,
+//                new IndexOptions().unique(true));
+        List<IndexModel> indexes = singletonList(new IndexModel(Keys.KEY_AND_GROUP_FIELDS, new IndexOptions().unique(true)));
+        CreateIndexOptions createIndexOptions = new CreateIndexOptions();
+        triggerCollection.createIndexes(indexes, createIndexOptions.commitQuorum(CreateIndexCommitQuorum.create(1)));
     }
 
     public void dropIndex() {
