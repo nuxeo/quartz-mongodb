@@ -23,7 +23,12 @@ public class ExternalMongoConnector implements MongoConnector {
      */
     public ExternalMongoConnector(final WriteConcern writeConcern, final MongoDatabase database) {
         this.database = database;
-        this.writeConcern = writeConcern;
+        // Pin to ACKNOWLEDGED if null so the driver treats it as the server default
+        // (WriteConcern.isServerDefault() == true) and omits the writeConcern field from commands.
+        // Required for DocumentDB Elastic, which rejects commands carrying an explicit
+        // writeConcern (error 303). Also covers the case where the externally-provided
+        // MongoClient/MongoDatabase was constructed without an explicit writeConcern.
+        this.writeConcern = writeConcern != null ? writeConcern : WriteConcern.ACKNOWLEDGED;
     }
 
     /**
@@ -41,6 +46,13 @@ public class ExternalMongoConnector implements MongoConnector {
     @Override
     public MongoCollection<Document> getCollection(String collectionName) {
         return database.getCollection(collectionName).withWriteConcern(writeConcern);
+    }
+
+    @Override
+    public MongoDatabase getDatabase() {
+        // Database-level commands (e.g. createCollection) also need the writeConcern field
+        // omitted when targeting DocumentDB Elastic; the field's invariant guarantees that.
+        return database.withWriteConcern(writeConcern);
     }
 
     @Override
