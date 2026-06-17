@@ -1,6 +1,8 @@
 package com.novemberain.quartz.mongodb;
 
+import com.mongodb.MongoCommandException;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import com.novemberain.quartz.mongodb.cluster.*;
 import com.novemberain.quartz.mongodb.dao.*;
 import com.novemberain.quartz.mongodb.db.MongoConnector;
@@ -148,6 +150,7 @@ public class MongoStoreAssembler {
                 .withKeyStore(jobStore.mongoOptionKeyStorePath, jobStore.mongoOptionKeyStorePassword, jobStore.mongoOptionKeyStoreType)
                 .withWriteConcernWriteTimeout(jobStore.mongoOptionWriteConcernTimeoutMillis)
                 .withWriteConcernW(jobStore.mongoOptionWriteConcernW)
+                .withUseServerDefaultWriteConcern(jobStore.mongoOptionUseServerDefaultWriteConcern)
                 .build();
     }
 
@@ -184,6 +187,26 @@ public class MongoStoreAssembler {
     }
 
     private MongoCollection<Document> getCollection(MongoDBJobStore jobStore, String name) {
-        return mongoConnector.getCollection(jobStore.collectionPrefix + name);
+        String collectionName = jobStore.collectionPrefix + name;
+        // Amazon DocumentDB Elastic does not support implicit collection creation (error 85),
+        // so explicitly create the collection before using it. Custom connectors may not expose
+        // a MongoDatabase via getDatabase(); in that case we silently skip explicit creation and
+        // rely on the connector's own behaviour (implicit creation works on standard MongoDB).
+        MongoDatabase db;
+        try {
+            db = mongoConnector.getDatabase();
+        } catch (UnsupportedOperationException e) {
+            // Connector does not support getDatabase(); skip explicit collection creation.
+            return mongoConnector.getCollection(collectionName);
+        }
+        try {
+            db.createCollection(collectionName);
+        } catch (MongoCommandException e) {
+            // Ignore error 48 (NamespaceExists): the collection already exists, which is fine.
+            if (e.getErrorCode() != 48) {
+                throw e;
+            }
+        }
+        return mongoConnector.getCollection(collectionName);
     }
 }

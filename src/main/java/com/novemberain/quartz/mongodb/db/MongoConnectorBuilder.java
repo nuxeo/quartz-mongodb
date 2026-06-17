@@ -23,6 +23,7 @@ public class MongoConnectorBuilder {
     private MongoConnector connector;
     private String writeConcernW;
     private Integer writeConcernWriteTimeout;
+    private boolean useServerDefaultWriteConcern;
     private MongoDatabase database;
     private MongoClient client;
     private String dbName;
@@ -186,22 +187,34 @@ public class MongoConnectorBuilder {
     }
 
     private WriteConcern createWriteConcern() throws SchedulerConfigException {
-        checkNotNull(writeConcernWriteTimeout, "Write timeout is expected.");
-
-        if(writeConcernW != null) {
-            return WriteConcern.valueOf(writeConcernW)
-               .withWTimeout(writeConcernWriteTimeout, TimeUnit.MILLISECONDS)
-               .withJournal(true);
+        if (useServerDefaultWriteConcern) {
+            // Opt-in: use the driver's server-default write concern (ACKNOWLEDGED).
+            // WriteConcern.ACKNOWLEDGED.isServerDefault() returns true so the MongoDB driver
+            // omits the writeConcern field from every command it sends.
+            // Required for AWS DocumentDB Elastic, which rejects commands that carry an
+            // explicit writeConcern (error 303 "Field 'writeConcern' is currently not supported").
+            // Note: this property exists because Quartz's PropertiesParser converts empty
+            // string values to null, so an empty 'mongoOptionWriteConcernW=' cannot be used
+            // to signal "server default".
+            return WriteConcern.ACKNOWLEDGED;
         }
 
-        // Default:
-        // Use MAJORITY to make sure that writes (locks, updates, check-ins)
-        // are propagated to secondaries in a Replica Set. It allows us to
-        // have consistent state in case of failure of the primary.
-        //
-        // Since MongoDB 3.2, when MAJORITY is used and protocol version == 1
-        // for replica set, then Journaling in enabled by default for primary
-        // and secondaries.
+        if (writeConcernW != null && writeConcernW.isBlank()) {
+            // Programmatic-only path (Quartz strips empty property values to null before
+            // reaching the setter). Treat explicitly blank as server-default for parity
+            // with useServerDefaultWriteConcern=true.
+            return WriteConcern.ACKNOWLEDGED;
+        }
+
+        checkNotNull(writeConcernWriteTimeout, "Write timeout is expected.");
+
+        if (writeConcernW != null) {
+            return WriteConcern.valueOf(writeConcernW)
+                   .withWTimeout(writeConcernWriteTimeout, TimeUnit.MILLISECONDS)
+                   .withJournal(true);
+        }
+
+        // Default: MAJORITY to ensure writes are propagated to secondaries in a Replica Set.
         return WriteConcern.MAJORITY.withWTimeout(writeConcernWriteTimeout, TimeUnit.MILLISECONDS)
                 .withJournal(true);
     }
@@ -286,6 +299,21 @@ public class MongoConnectorBuilder {
 
     public MongoConnectorBuilder withWriteConcernW(String writeConcernW) {
         this.writeConcernW = writeConcernW;
+        return this;
+    }
+
+    /**
+     * When set to {@code true}, {@link #createWriteConcern()} returns
+     * {@link WriteConcern#ACKNOWLEDGED} regardless of {@code writeConcernW} and
+     * {@code writeConcernWriteTimeout}. Because {@code ACKNOWLEDGED.isServerDefault()}
+     * is {@code true}, the MongoDB driver will not append a {@code writeConcern}
+     * field to any command. Required for AWS DocumentDB Elastic, which rejects
+     * commands carrying an explicit writeConcern (error 303).
+     *
+     * @since 2.4.0
+     */
+    public MongoConnectorBuilder withUseServerDefaultWriteConcern(boolean useServerDefaultWriteConcern) {
+        this.useServerDefaultWriteConcern = useServerDefaultWriteConcern;
         return this;
     }
 

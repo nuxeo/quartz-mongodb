@@ -73,6 +73,23 @@ public class MongoDBJobStore implements JobStore, Constants {
 
     int mongoOptionWriteConcernTimeoutMillis = 5000;
     String mongoOptionWriteConcernW;
+    /**
+     * When {@code true}, the scheduler uses the driver's server-default write concern
+     * ({@link com.mongodb.WriteConcern#ACKNOWLEDGED}) so the MongoDB driver omits the
+     * {@code writeConcern} field from every command. Required for AWS DocumentDB Elastic,
+     * which rejects commands carrying an explicit writeConcern (error 303).
+     * <p>
+     * Defaults to {@code false}, preserving the legacy {@link com.mongodb.WriteConcern#MAJORITY}
+     * behavior used in MongoDB Replica Set deployments.
+     * <p>
+     * Note: setting {@code org.quartz.jobStore.mongoOptionWriteConcernW=} (empty) in
+     * {@code quartz.properties} has no effect — Quartz's property parser returns {@code null}
+     * for blank values, which falls back to {@code MAJORITY}. Use this boolean property instead.
+     *
+     * @since 2.4.0
+     */
+    boolean mongoOptionUseServerDefaultWriteConcern = false;
+
     public static final String PROPERTIES_FILE_NAME = "quartz.properties";
 
     public MongoDBJobStore() {
@@ -655,6 +672,14 @@ public class MongoDBJobStore implements JobStore, Constants {
 
     public void setMongoOptionWriteConcernTimeoutMillis(int writeConcernTimeoutMillis) {
         this.mongoOptionWriteConcernTimeoutMillis = writeConcernTimeoutMillis;
+    }
+
+    /**
+     * @see #mongoOptionUseServerDefaultWriteConcern
+     * @since 2.4.0
+     */
+    public void setMongoOptionUseServerDefaultWriteConcern(boolean useServerDefaultWriteConcern) {
+        this.mongoOptionUseServerDefaultWriteConcern = useServerDefaultWriteConcern;
     }
 
     public String getAuthDbName() {
